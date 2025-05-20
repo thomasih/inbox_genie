@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+msal
+azure-identity
+python-dotenv
+requests
+openai
+sqlalchemy
+psycopg2-binary
+redis
+pytest
+httpx

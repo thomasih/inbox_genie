@@ -1,0 +1,33 @@
+# ---- Editor / OS ----
+.DS_Store
+.vscode/
+*.swp
+
+# ---- Python / backend ----
+backend/venv/
+backend/__pycache__/
+backend/*.py[cod]
+backend/.env
+backend/.env.local
+
+# ---- Node / frontend ----
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# ---- Docker ----
+*.log
+docker-compose.override.yml
+
+# ---- Terraform ----
+infra/terraform/.terraform/
+infra/terraform/terraform.tfstate*
+infra/terraform/crash.log
+
+# ---- Logs & Databases ----
+*.log
+*.sqlite3
+
+# ---- Misc ----
+.env

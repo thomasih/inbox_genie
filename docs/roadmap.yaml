@@ -1,0 +1,26 @@
+project: “InboxZen”
+description: |
+  A Python-based SaaS that uses Microsoft Graph + OpenAI 
+  to classify & batch-move emails into folders.
+
+goals:
+  - OAuth via MSAL (Mail.ReadWrite)
+  - Fetch & batch emails
+  - GPT-based classification + folder mapping
+  - Move emails, record undo
+  - React UI for connect, run, results
+
+constraints:
+  - Python (FastAPI) backend
+  - GDPR: no long-term raw storage
+  - Dockerized, deployable to Azure
+  - CI/CD: GitHub Actions
+
+steps:
+  - Scaffold backend
+  - Implement OAuth flow
+  - Graph API fetch/send
+  - AI classifier module
+  - Email mover + undo
+  - React dashboard
+  - CI/CD + Terraform infra
