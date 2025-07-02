@@ -10,3 +10,6 @@ psycopg2-binary
 redis
 pytest
 httpx
+sentence-transformers
+scikit-learn
+transformers

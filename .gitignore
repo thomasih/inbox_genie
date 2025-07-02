@@ -31,3 +31,4 @@ infra/terraform/crash.log
 
 # ---- Misc ----
 .env
+**/.env

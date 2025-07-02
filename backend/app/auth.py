@@ -13,7 +13,7 @@ CLIENT_ID = os.getenv("AZURE_CLIENT_ID")
 CLIENT_SECRET = os.getenv("AZURE_CLIENT_SECRET")
 TENANT_ID = os.getenv("AZURE_TENANT_ID")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-REDIRECT_PATH = "/auth/callback"
+REDIRECT_PATH = "/api/auth/callback"
 SCOPE = ["User.Read", "Mail.ReadWrite"]
 
 # In-memory token cache (thread-safe)
