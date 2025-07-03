@@ -1,5 +1,6 @@
 import React from 'react'
 import { PublicClientApplication } from '@azure/msal-browser'
+import axios from 'axios'
 
 const msalConfig = {
   auth: {
@@ -12,8 +13,18 @@ export default function ConnectMailbox({ onLogin }) {
   const pca = new PublicClientApplication(msalConfig)
 
   const handleLogin = async () => {
-    await pca.loginPopup({ scopes: ['Mail.ReadWrite'] })
+    const loginResponse = await pca.loginPopup({ scopes: ['Mail.ReadWrite'] })
     const account = pca.getAllAccounts()[0]
+    // Acquire token after login
+    const tokenResponse = await pca.acquireTokenSilent({
+      scopes: ['Mail.ReadWrite'],
+      account
+    })
+    // Store token in backend
+    await axios.post('/api/email/store-token', {
+      user_email: account.username,
+      access_token: tokenResponse.accessToken
+    })
     onLogin(account)
   }
 

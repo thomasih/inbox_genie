@@ -108,18 +108,24 @@ async def run_cleanse(request: RunCleanseRequest):
         logger.exception("/run-cleanse error")
         return JSONResponse({"error": str(e)}, status_code=500)
 
+class StoreTokenRequest(BaseModel):
+    user_email: str
+    access_token: str
+    refresh_token: str = None
+    expires_at: str = None
+
 @router.post("/store-token")
-async def store_token(user_email: str, access_token: str, refresh_token: str = None, expires_at: str = None):
+async def store_token(request: StoreTokenRequest):
     db: Session = SessionLocal()
-    token = db.query(Token).filter(Token.user_email == user_email).first()
+    token = db.query(Token).filter(Token.user_email == request.user_email).first()
     if token:
-        token.access_token = access_token
-        token.refresh_token = refresh_token
-        token.expires_at = expires_at
+        token.access_token = request.access_token
+        token.refresh_token = request.refresh_token
+        token.expires_at = request.expires_at
     else:
-        token = Token(user_email=user_email, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
+        token = Token(user_email=request.user_email, access_token=request.access_token, refresh_token=request.refresh_token, expires_at=request.expires_at)
         db.add(token)
     db.commit()
     db.close()
-    logger.info(f"Token stored for user {user_email}")
+    logger.info(f"Token stored for user {request.user_email}")
     return {"status": "success"}
