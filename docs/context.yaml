@@ -1,0 +1,126 @@
+project\_name: InboxGenie
+overview: |
+InboxGenie is a Python-and-React web application that integrates with Microsoft Graph and OpenAI to automatically classify, cluster, and sort a user’s emails into folders. It streamlines mailbox management via AI-driven embeddings, clustering, and text generation in a Dockerized, Azure-deployable SaaS architecture.
+
+repository\_structure: |
+.
+├── README.md               # High-level overview & quickstart
+├── .gitignore              # Ignored files (env, venv, cache, logs)
+├── copilot.config.json     # Copilot agent config (default context: docs/roadmap.yaml)
+├── docs/
+│   └── roadmap.yaml        # Project goals, constraints, and roadmap
+├── tokens.db               # SQLite DB for OAuth tokens
+├── frontend/
+│   ├── Dockerfile          # Multi-stage build and Nginx deploy
+│   ├── index.html          # HTML entrypoint
+│   ├── package.json        # Frontend dependencies & scripts
+│   ├── vite.config.js      # Dev server & proxy to backend
+│   ├── tailwind.config.js  # Tailwind setup
+│   ├── postcss.config.js   # PostCSS plugins
+│   └── src/
+│       ├── main.jsx        # App bootstrap
+│       ├── App.jsx         # Root component
+│       └── components/
+│           ├── ConnectMailbox.jsx  # MSAL login
+│           ├── RunCleanupButton.jsx # Triggers pipeline run
+│           ├── StatusCard.jsx      # Processing summary
+│           └── ClusterResults.jsx  # Cluster preview
+└── backend/
+├── Dockerfile          # Build image for Azure/AKS
+├── requirements.txt    # Python dependencies
+├── app/
+│   ├── main.py         # FastAPI app, routers & pipeline endpoint
+│   ├── auth.py         # OAuth (MSAL) flow & token persistence
+│   ├── email\_client.py # Fetch, embed, cluster, name, and move emails
+│   ├── embeddings.py   # SentenceTransformers embedder interface
+│   ├── clustering.py   # KMeans clustering & representative sampling
+│   ├── naming.py       # HuggingFace text-generation for folder naming
+│   ├── db.py           # SQLAlchemy engine & session setup
+│   └── models\_token.py # Token model (user\_email, tokens)
+└── tests/
+└── test\_pipeline.py # Pytest suite for core pipeline
+
+backend\_details:
+fastapi\_app:
+routers:
+auth:
+\- path: /api/auth/login
+\- path: /api/auth/callback
+email:
+\- path: /api/email/run-cleanse
+\- path: /api/email/store-token
+global\_endpoints:
+\- /api/health
+\- /api/pipeline/run
+logging: "Structured with inboxgenie.\* loggers (INFO & error handling)"
+authentication:
+env\_vars:
+\- AZURE\_CLIENT\_ID
+\- AZURE\_CLIENT\_SECRET
+\- AZURE\_TENANT\_ID
+library: "MSAL"
+storage: "SQLite via SQLAlchemy (tokens.db)"
+email\_processing:
+steps:
+fetch: "Retrieve top 50 messages via Microsoft Graph"
+embed: "Vectorize email bodies with all-MiniLM-L6-v2"
+cluster: "Cluster embeddings with scikit-learn KMeans"
+name\_folders: "Generate folder names using google/flan-t5-small"
+move: "Patch Graph API parentFolderId (optional)"
+response: "JSON with folders map and cluster\_map"
+
+data\_persistence:
+database: "SQLite (tokens.db), configurable via DATABASE\_URL"
+orm: "SQLAlchemy, auto-creates tables on startup"
+
+audio\_ml\_modules:
+embeddings: "sentence-transformers for local inference"
+clustering: "scikit-learn KMeans with deterministic seed"
+llm\_naming: "transformers.pipeline (text-generation)"
+
+frontend\_details:
+tech\_stack:
+\- React 18
+\- Vite
+\- Tailwind CSS
+\- MSAL Browser
+\- Axios
+auth\_flow: "ConnectMailbox triggers MSAL popup and returns account"
+token\_storage: "Frontend posts tokens to /api/email/store-token"
+pipeline\_trigger: "RunCleanupButton posts user\_email & dry\_run flag"
+components:
+StatusCard: "Shows counts, folders created, timestamp"
+ClusterResults: "Previews clusters with subject snippets"
+dev\_proxy: "Vite proxies /api to [http://localhost:8000](http://localhost:8000)"
+
+configuration:
+env\_vars:
+AZURE\_CLIENT\_ID: "Azure AD client ID"
+AZURE\_CLIENT\_SECRET: "Azure AD client secret"
+AZURE\_TENANT\_ID: "Azure AD tenant ID"
+EMAIL\_SCOPES: "Mail.ReadWrite"
+OPENAI\_API\_KEY: "Expected for future expansions"
+DATABASE\_URL: "Optional, defaults to sqlite:///./tokens.db"
+copilot\_config: "Default context file: docs/roadmap.yaml"
+
+deployment:
+docker:
+backend: "Python 3.11 slim, runs uvicorn on port 80"
+frontend: "Multi-stage Node build, serves via Nginx"
+cloud:
+\- "Azure App Service / AKS (backend)"
+\- "Azure Static Web Apps (frontend)"
+infrastructure: "Terraform mentioned in roadmap (infra folder not in repo)"
+
+testing\_ci:
+tests: "backend/tests/test\_pipeline.py using PyTest"
+ci\_cd: "Planned GitHub Actions per roadmap"
+
+roadmap:
+
+* "OAuth via MSAL"
+* "Batch email fetch & move"
+* "GPT-based classification & folder mapping"
+* "Undo support"
+* "React dashboard UX enhancements"
+* "CI/CD and Terraform automation"

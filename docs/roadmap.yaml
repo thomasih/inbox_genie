@@ -1,4 +1,4 @@
-project: “InboxZen”
+project: “Inbox Genie”
 description: |
   A Python-based SaaS that uses Microsoft Graph + OpenAI 
   to classify & batch-move emails into folders.
