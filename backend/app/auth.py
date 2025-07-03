@@ -3,7 +3,10 @@ from fastapi.responses import RedirectResponse, JSONResponse
 import msal
 import os
 from dotenv import load_dotenv
-import threading
+import logging
+from .db import SessionLocal
+from .models_token import Token
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -16,12 +19,12 @@ AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 REDIRECT_PATH = "/api/auth/callback"
 SCOPE = ["User.Read", "Mail.ReadWrite"]
 
-# In-memory token cache (thread-safe)
-token_cache = {}
-token_cache_lock = threading.Lock()
+logger = logging.getLogger("inboxgenie.auth")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 
 @router.get("/login")
 async def login(request: Request):
+    logger.info("Login requested from %s", request.client.host)
     msal_app = msal.ConfidentialClientApplication(
         CLIENT_ID, authority=AUTHORITY, client_credential=CLIENT_SECRET
     )
@@ -35,24 +38,38 @@ async def login(request: Request):
 
 @router.get("/callback")
 async def callback(request: Request, code: str):
-    msal_app = msal.ConfidentialClientApplication(
-        CLIENT_ID, authority=AUTHORITY, client_credential=CLIENT_SECRET
-    )
-    redirect_uri = f"http://localhost:8000{REDIRECT_PATH}"
-    result = msal_app.acquire_token_by_authorization_code(
-        code,
-        scopes=SCOPE,
-        redirect_uri=redirect_uri
-    )
-    if "access_token" in result:
-        # Get user info
-        import requests
-        headers = {"Authorization": f"Bearer {result['access_token']}"}
-        user_resp = requests.get("https://graph.microsoft.com/v1.0/me", headers=headers)
-        user_email = user_resp.json().get("mail") or user_resp.json().get("userPrincipalName")
-        # Store tokens in memory (keyed by user email)
-        with token_cache_lock:
-            token_cache[user_email] = result
-        return JSONResponse({"email": user_email, "access_token": result["access_token"]})
-    else:
-        return JSONResponse({"error": result.get("error_description", "Unknown error")}, status_code=400)
+    try:
+        msal_app = msal.ConfidentialClientApplication(
+            CLIENT_ID, authority=AUTHORITY, client_credential=CLIENT_SECRET
+        )
+        redirect_uri = f"http://localhost:8000{REDIRECT_PATH}"
+        result = msal_app.acquire_token_by_authorization_code(
+            code,
+            scopes=SCOPE,
+            redirect_uri=redirect_uri
+        )
+        if "access_token" in result:
+            import requests
+            headers = {"Authorization": f"Bearer {result['access_token']}"}
+            user_resp = requests.get("https://graph.microsoft.com/v1.0/me", headers=headers)
+            user_email = user_resp.json().get("mail") or user_resp.json().get("userPrincipalName")
+            # Store tokens in DB
+            db: Session = SessionLocal()
+            token = db.query(Token).filter(Token.user_email == user_email).first()
+            if token:
+                token.access_token = result["access_token"]
+                token.refresh_token = result.get("refresh_token")
+                token.expires_at = None  # You can parse expires_in if needed
+            else:
+                token = Token(user_email=user_email, access_token=result["access_token"], refresh_token=result.get("refresh_token"), expires_at=None)
+                db.add(token)
+            db.commit()
+            db.close()
+            logger.info(f"User {user_email} authenticated and token stored in DB.")
+            return JSONResponse({"email": user_email, "access_token": result["access_token"]})
+        else:
+            logger.error(f"Auth callback error: {result.get('error_description', 'Unknown error')}")
+            return JSONResponse({"error": result.get("error_description", "Unknown error")}, status_code=400)
+    except Exception as e:
+        logger.exception("Exception in auth callback")
+        return JSONResponse({"error": str(e)}, status_code=500)

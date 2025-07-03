@@ -7,7 +7,15 @@ export default function RunCleanupButton({ user, onStatus }) {
   const runCleanup = async () => {
     setLoading(true)
     try {
-      const resp = await axios.post('/api/email/run-cleanse')
+      // Use the correct property for user email from MSAL account object
+      const userEmail = user?.username || user?.email || user?.userName
+      if (!userEmail) {
+        throw new Error('User email not found in user object')
+      }
+      const resp = await axios.post('/api/email/run-cleanse', {
+        user_email: userEmail,
+        dry_run: true
+      })
       onStatus(resp.data)
     } catch (err) {
       console.error(err)
