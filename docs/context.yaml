@@ -1,6 +1,6 @@
 project\_name: InboxGenie
 overview: |
-InboxGenie is a Python-and-React web application that integrates with Microsoft Graph and OpenAI to automatically classify, cluster, and sort a user’s emails into folders. It streamlines mailbox management via AI-driven embeddings, clustering, and text generation in a Dockerized, Azure-deployable SaaS architecture.
+InboxGenie is a Python-and-React web application that integrates with Microsoft Graph and (planned) cloud LLMs to help users condense and organize their emails. It streamlines mailbox management by extracting sender, subject, and snippet for each email, with future plans for AI-driven foldering using a cloud LLM. The app is Dockerized and Azure-deployable.
 
 repository\_structure: |
 .
@@ -22,23 +22,20 @@ repository\_structure: |
 │       ├── App.jsx         # Root component
 │       └── components/
 │           ├── ConnectMailbox.jsx  # MSAL login
-│           ├── RunCleanupButton.jsx # Triggers pipeline run
+│           ├── RunCleanupButton.jsx # Triggers email fetch
 │           ├── StatusCard.jsx      # Processing summary
-│           └── ClusterResults.jsx  # Cluster preview
+│           └── RawEmailResults.jsx # Flat email preview
 └── backend/
 ├── Dockerfile          # Build image for Azure/AKS
 ├── requirements.txt    # Python dependencies
 ├── app/
-│   ├── main.py         # FastAPI app, routers & pipeline endpoint
+│   ├── main.py         # FastAPI app, routers & endpoints
 │   ├── auth.py         # OAuth (MSAL) flow & token persistence
-│   ├── email\_client.py # Fetch, embed, cluster, name, and move emails
-│   ├── embeddings.py   # SentenceTransformers embedder interface
-│   ├── clustering.py   # KMeans clustering & representative sampling
-│   ├── naming.py       # HuggingFace text-generation for folder naming
+│   ├── email\_client.py # Fetch and condense emails
 │   ├── db.py           # SQLAlchemy engine & session setup
 │   └── models\_token.py # Token model (user\_email, tokens)
 └── tests/
-└── test\_pipeline.py # Pytest suite for core pipeline
+└── \_\_init\_\_.py     # (No ML/LLM pipeline tests remain)
 
 backend\_details:
 fastapi\_app:
@@ -47,11 +44,10 @@ auth:
 \- path: /api/auth/login
 \- path: /api/auth/callback
 email:
-\- path: /api/email/run-cleanse
-\- path: /api/email/store-token
+\- path: /api/email/emails/raw (POST, expects user\_email)
+\- path: /api/email/store-token (expects JSON body with user\_email and access\_token via Pydantic model)
 global\_endpoints:
 \- /api/health
-\- /api/pipeline/run
 logging: "Structured with inboxgenie.\* loggers (INFO & error handling)"
 authentication:
 env\_vars:
@@ -63,20 +59,13 @@ storage: "SQLite via SQLAlchemy (tokens.db)"
 email\_processing:
 steps:
 fetch: "Retrieve top 50 messages via Microsoft Graph"
-embed: "Vectorize email bodies with all-MiniLM-L6-v2"
-cluster: "Cluster embeddings with scikit-learn KMeans"
-name\_folders: "Generate folder names using google/flan-t5-small"
-move: "Patch Graph API parentFolderId (optional)"
-response: "JSON with folders map and cluster\_map"
+condense: "Extract sender, subject, and snippet for each email"
+response: "JSON with flat list of emails (no clustering or foldering)"
+# Embedding, clustering, and local LLM steps removed
 
 data\_persistence:
 database: "SQLite (tokens.db), configurable via DATABASE\_URL"
 orm: "SQLAlchemy, auto-creates tables on startup"
-
-audio\_ml\_modules:
-embeddings: "sentence-transformers for local inference"
-clustering: "scikit-learn KMeans with deterministic seed"
-llm\_naming: "transformers.pipeline (text-generation)"
 
 frontend\_details:
 tech\_stack:
@@ -85,12 +74,12 @@ tech\_stack:
 \- Tailwind CSS
 \- MSAL Browser
 \- Axios
-auth\_flow: "ConnectMailbox triggers MSAL popup and returns account"
-token\_storage: "Frontend posts tokens to /api/email/store-token"
-pipeline\_trigger: "RunCleanupButton posts user\_email & dry\_run flag"
+auth\_flow: "ConnectMailbox triggers MSAL popup, acquires access token, and posts it to backend via /api/email/store-token before proceeding"
+token\_storage: "Frontend posts access token and user\_email to /api/email/store-token after login; backend stores/updates token in DB via Pydantic model request"
+pipeline\_trigger: "RunCleanupButton posts user\_email to /api/email/emails/raw"
 components:
-StatusCard: "Shows counts, folders created, timestamp"
-ClusterResults: "Previews clusters with subject snippets"
+StatusCard: "Shows counts, timestamp"
+RawEmailResults: "Previews flat list of emails with subject, snippet, sender"
 dev\_proxy: "Vite proxies /api to [http://localhost:8000](http://localhost:8000)"
 
 configuration:
@@ -99,7 +88,6 @@ AZURE\_CLIENT\_ID: "Azure AD client ID"
 AZURE\_CLIENT\_SECRET: "Azure AD client secret"
 AZURE\_TENANT\_ID: "Azure AD tenant ID"
 EMAIL\_SCOPES: "Mail.ReadWrite"
-OPENAI\_API\_KEY: "Expected for future expansions"
 DATABASE\_URL: "Optional, defaults to sqlite:///./tokens.db"
 copilot\_config: "Default context file: docs/roadmap.yaml"
 
@@ -113,14 +101,14 @@ cloud:
 infrastructure: "Terraform mentioned in roadmap (infra folder not in repo)"
 
 testing\_ci:
-tests: "backend/tests/test\_pipeline.py using PyTest"
+tests: "No ML/LLM pipeline tests remain"
 ci\_cd: "Planned GitHub Actions per roadmap"
 
 roadmap:
 
 * "OAuth via MSAL"
 * "Batch email fetch & move"
-* "GPT-based classification & folder mapping"
+* "Cloud LLM-based classification & folder mapping (planned)"
 * "Undo support"
 * "React dashboard UX enhancements"
 * "CI/CD and Terraform automation"

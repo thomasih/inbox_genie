@@ -13,3 +13,5 @@ httpx
 sentence-transformers
 scikit-learn
 transformers
+beautifulsoup4
+html2text
