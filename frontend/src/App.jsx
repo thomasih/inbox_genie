@@ -3,11 +3,13 @@ import ConnectMailbox from './components/ConnectMailbox'
 import RunCleanupButton from './components/RunCleanupButton'
 import StatusCard from './components/StatusCard'
 import RawEmailResults from './components/RawEmailResults'
+import CategorizedEmailResults from './components/CategorizedEmailResults'
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [status, setStatus] = useState({})
   const [emails, setEmails] = useState(null)
+  const [folders, setFolders] = useState(null)
 
   const handleStatus = (data) => {
     setStatus({
@@ -15,6 +17,11 @@ export default function App() {
       timestamp: Date.now()
     })
     setEmails(data?.emails || [])
+    setFolders(null) // Clear folders if fetching raw
+  }
+
+  const handleCategorized = (folders) => {
+    setFolders(folders)
   }
 
   return (
@@ -25,8 +32,10 @@ export default function App() {
         : (
           <>
             <StatusCard status={status} />
-            <RunCleanupButton user={user} onStatus={handleStatus} />
-            <RawEmailResults emails={emails} />
+            <RunCleanupButton user={user} onStatus={handleStatus} onCategorized={handleCategorized} />
+            {folders
+              ? <CategorizedEmailResults folders={folders} />
+              : <RawEmailResults emails={emails} />}
           </>
         )}
     </div>

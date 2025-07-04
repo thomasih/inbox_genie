@@ -1,6 +1,6 @@
 project\_name: InboxGenie
 overview: |
-InboxGenie is a Python-and-React web application that integrates with Microsoft Graph and (planned) cloud LLMs to help users condense and organize their emails. It streamlines mailbox management by extracting sender, subject, and snippet for each email, with future plans for AI-driven foldering using a cloud LLM. The app is Dockerized and Azure-deployable.
+InboxGenie is a Python-and-React web application that integrates with Microsoft Graph and Azure OpenAI (gpt-3.5-turbo) to help users condense and organize their emails. It streamlines mailbox management by extracting sender, subject, and snippet for each email, and uses a cloud LLM for robust, cost-conscious foldering into a fixed set of categories. The app is Dockerized and Azure-deployable.
 
 repository\_structure: |
 .
@@ -21,21 +21,23 @@ repository\_structure: |
 │       ├── main.jsx        # App bootstrap
 │       ├── App.jsx         # Root component
 │       └── components/
-│           ├── ConnectMailbox.jsx  # MSAL login
-│           ├── RunCleanupButton.jsx # Triggers email fetch
-│           ├── StatusCard.jsx      # Processing summary
-│           └── RawEmailResults.jsx # Flat email preview
+│           ├── ConnectMailbox.jsx      # MSAL login
+│           ├── RunCleanupButton.jsx    # Triggers email fetch
+│           ├── StatusCard.jsx         # Processing summary
+│           ├── RawEmailResults.jsx    # Flat email preview
+│           └── CategorizedEmailResults.jsx # Grouped email display
 └── backend/
-├── Dockerfile          # Build image for Azure/AKS
-├── requirements.txt    # Python dependencies
-├── app/
-│   ├── main.py         # FastAPI app, routers & endpoints
-│   ├── auth.py         # OAuth (MSAL) flow & token persistence
-│   ├── email\_client.py # Fetch and condense emails
-│   ├── db.py           # SQLAlchemy engine & session setup
-│   └── models\_token.py # Token model (user\_email, tokens)
-└── tests/
-└── \_\_init\_\_.py     # (No ML/LLM pipeline tests remain)
+    ├── Dockerfile          # Build image for Azure/AKS
+    ├── requirements.txt    # Python dependencies
+    ├── app/
+    │   ├── main.py         # FastAPI app, routers & endpoints
+    │   ├── auth.py         # OAuth (MSAL) flow & token persistence
+    │   ├── email\_client.py # Fetch and condense emails
+    │   ├── llm\_categorizer.py # LLM batching, prompt, parsing, error handling
+    │   ├── db.py           # SQLAlchemy engine & session setup
+    │   └── models\_token.py # Token model (user\_email, tokens)
+    └── tests/
+        └── \_\_init\_\_.py     # (No ML/LLM pipeline tests remain)
 
 backend\_details:
 fastapi\_app:
@@ -60,8 +62,21 @@ email\_processing:
 steps:
 fetch: "Retrieve top 50 messages via Microsoft Graph"
 condense: "Extract sender, subject, and snippet for each email"
-response: "JSON with flat list of emails (no clustering or foldering)"
-# Embedding, clustering, and local LLM steps removed
+categorize: |
+Categorize emails into a fixed set of categories using Azure OpenAI (gpt-3.5-turbo). The backend sends batches of emails to the LLM, instructing it to assign each email to exactly one of the allowed categories (plus 'Other' for uncategorizable emails). The backend robustly parses and repairs LLM output, deduplicates IDs, ensures all emails are categorized, and filters out empty categories except 'Other'.
+response: "JSON with grouped emails per category (no empty or redundant folders, 'Other' always last)"
+llm\_categorizer:
+batching: "Batches of 5 emails sent to LLM to avoid output truncation."
+categories: |
+Fixed set: Finance, News, Technology, Shopping, Education, Travel, Utilities, Transportation, Music, Real Estate, Events, Entertainment, Job Opportunities, Other.
+json\_repair: |
+Uses demjson3 for robust fallback parsing. Pre-repair step adds missing comma before 'Summary' if needed to handle LLM output quirks.
+error\_handling: |
+If LLM output is truncated or cannot be parsed, returns a user-friendly error. Logs all issues.
+deduplication: |
+Ensures each email ID appears in only one category. Any missing IDs are added to 'Other'.
+filtering: |
+Only non-empty categories (plus 'Other') are returned to the frontend. 'Other' is always last.
 
 data\_persistence:
 database: "SQLite (tokens.db), configurable via DATABASE\_URL"
@@ -80,7 +95,9 @@ pipeline\_trigger: "RunCleanupButton posts user\_email to /api/email/emails/raw"
 components:
 StatusCard: "Shows counts, timestamp"
 RawEmailResults: "Previews flat list of emails with subject, snippet, sender"
+CategorizedEmailResults: "Displays grouped emails per category, only showing non-empty categories."
 dev\_proxy: "Vite proxies /api to [http://localhost:8000](http://localhost:8000)"
+llm\_categorization: "User can trigger LLM-based categorization. Only fixed categories are shown, with robust error handling."
 
 configuration:
 env\_vars:
@@ -89,6 +106,11 @@ AZURE\_CLIENT\_SECRET: "Azure AD client secret"
 AZURE\_TENANT\_ID: "Azure AD tenant ID"
 EMAIL\_SCOPES: "Mail.ReadWrite"
 DATABASE\_URL: "Optional, defaults to sqlite:///./tokens.db"
+AZURE\_OPENAI\_DEPLOYMENT: "Azure OpenAI deployment name (gpt-3.5-turbo)"
+AZURE\_OPENAI\_ENDPOINT: "Azure OpenAI endpoint URL"
+AZURE\_OPENAI\_API\_KEY: "Azure OpenAI API key"
+AZURE\_OPENAI\_API\_VERSION: "Azure OpenAI API version (default: 2024-12-01-preview)"
+USE\_LLM: "Set to 'true' to enable LLM categorization"
 copilot\_config: "Default context file: docs/roadmap.yaml"
 
 deployment:
@@ -112,3 +134,16 @@ roadmap:
 * "Undo support"
 * "React dashboard UX enhancements"
 * "CI/CD and Terraform automation"
+
+summary\_of\_2025\_07\_04\_changes: |
+- Migrated all email categorization to Azure OpenAI (gpt-3.5-turbo), removing legacy ML/LLM code.
+- Implemented robust backend batching (default 5 emails per batch) to avoid LLM output truncation.
+- Defined a fixed set of categories for LLM to use, eliminating redundant/overlapping folders.
+- Updated LLM prompt to strictly enforce use of only allowed categories (plus 'Other').
+- Added robust JSON repair: uses demjson3 for fallback parsing, and a regex pre-repair step to fix missing commas before 'Summary'.
+- Backend now deduplicates IDs, ensures every email is categorized exactly once, and adds any missing IDs to 'Other'.
+- Filters out empty categories (except 'Other'), and always returns 'Other' last.
+- Improved error handling: user-friendly errors if LLM output is truncated or malformed.
+- Frontend now displays only non-empty, allowed categories, with no redundant or empty folders.
+- All changes are cost-conscious, with caching and mocking for dev/testing.
+- Logging improved for all error and edge cases.

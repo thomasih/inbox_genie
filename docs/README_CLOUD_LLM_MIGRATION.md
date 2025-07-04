@@ -1,8 +1,8 @@
-# Why Switch to a Cloud LLM for Email Categorization
+# Why Switch to a Cloud LLM for Email Categorisation
 
 ## Summary
 
-This project originally explored three approaches for categorizing and grouping emails:
+This project originally explored three approaches for categorising and grouping emails:
 
 1. **Traditional ML (clustering, embeddings, etc.)**
 2. **Local LLM (running open-source models on local hardware)**
@@ -35,7 +35,7 @@ After experimentation, we are moving forward with a cloud LLM approach. Here’s
 
 ## Migration Plan
 - All local LLM, clustering, and embedding code is being removed from the backend.
-- The backend will call a cloud LLM API for categorization and folder naming in the next phase.
+- The backend will call a cloud LLM API for categorisation and folder naming in the next phase.
 - The current step is to ensure raw email extraction and frontend display works perfectly before reintroducing LLM-based grouping.
 
 ---

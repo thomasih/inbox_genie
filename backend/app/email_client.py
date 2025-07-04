@@ -9,6 +9,7 @@ import logging
 from pydantic import BaseModel
 from bs4 import BeautifulSoup
 import re
+from .llm_categorizer import LLMEmailCategorizer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -175,6 +176,45 @@ async def get_raw_emails(request: RunCleanseRequest):
         return JSONResponse({"emails": emails})
     except Exception as e:
         logger.exception("/emails/raw error")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@router.post("/emails/categorize")
+async def categorize_emails(request: RunCleanseRequest):
+    try:
+        user_email = request.user_email
+        logger.info("/emails/categorize endpoint called. user_email=%s", user_email)
+        messages = fetch_messages(user_email)
+        emails = []
+        for m in messages:
+            email_id = m.get("id")
+            subject = m.get("subject", "")
+            body = m.get("body", {})
+            sender = m.get("from", {})
+            sender_email = sender.get("emailAddress", {}).get("address", "")
+            sender_name = sender.get("emailAddress", {}).get("name", "")
+            sender_obj = {"name": sender_name, "email": sender_email}
+            main_text = extract_main_text(body)
+            if not main_text or len(main_text) < 30:
+                main_text = m.get("bodyPreview", "")
+            main_text = BeautifulSoup(main_text, 'html.parser').get_text(separator=' ', strip=True)
+            main_text = ' '.join(main_text.split())
+            snippet = clean_snippet(main_text)
+            emails.append({
+                "id": email_id,
+                "subject": subject,
+                "snippet": snippet,
+                "sender": sender_obj
+            })
+        logger.info(f"Fetched {len(emails)} emails for categorization.")
+        categorizer = LLMEmailCategorizer()
+        folder_map = categorizer.categorize_emails(emails)
+        # Build grouped emails: {folder: [email_obj, ...]}
+        id_to_email = {e["id"]: e for e in emails}
+        grouped = {folder: [id_to_email[eid] for eid in ids if eid in id_to_email] for folder, ids in folder_map.items()}
+        logger.info(f"Categorized into {len(grouped)} folders.")
+        return JSONResponse({"folders": grouped})
+    except Exception as e:
+        logger.exception("/emails/categorize error")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 class StoreTokenRequest(BaseModel):
