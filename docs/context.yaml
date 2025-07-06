@@ -37,7 +37,7 @@ repository\_structure: |
     │   ├── db.py           # SQLAlchemy engine & session setup
     │   └── models\_token.py # Token model (user\_email, tokens)
     └── tests/
-        └── \_\_init\_\_.py     # (No ML/LLM pipeline tests remain)
+        └── ...
 
 backend\_details:
 fastapi\_app:
@@ -147,3 +147,10 @@ summary\_of\_2025\_07\_04\_changes: |
 - Frontend now displays only non-empty, allowed categories, with no redundant or empty folders.
 - All changes are cost-conscious, with caching and mocking for dev/testing.
 - Logging improved for all error and edge cases.
+
+summary_of_2025_07_06_changes: |
+- Users can now select the number of recent emails to process (instead of a fixed 50). Both backend and frontend support a `num_emails` parameter.
+- Backend endpoints `/api/email/emails/raw` and `/api/email/emails/categorize` accept and use `num_emails` (default 50 if not provided).
+- Frontend UI (RunCleanupButton) includes a number input for users to choose how many emails to fetch/categorize, passing this value to the backend.
+- All previous logic (batching, categorization, error handling, etc.) remains, but now operates on a user-defined number of emails.
+- Docs and context updated to reflect this new user-configurable email count feature.

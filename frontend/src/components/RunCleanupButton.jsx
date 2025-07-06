@@ -4,6 +4,7 @@ import axios from 'axios'
 export default function RunCleanupButton({ user, onStatus, onCategorized }) {
   const [loading, setLoading] = useState(false)
   const [catLoading, setCatLoading] = useState(false)
+  const [numEmails, setNumEmails] = useState(50)
 
   const runFetchRawEmails = async () => {
     setLoading(true)
@@ -13,7 +14,8 @@ export default function RunCleanupButton({ user, onStatus, onCategorized }) {
         throw new Error('User email not found in user object')
       }
       const resp = await axios.post('/api/email/emails/raw', {
-        user_email: userEmail
+        user_email: userEmail,
+        num_emails: numEmails
       })
       onStatus(resp.data)
     } catch (err) {
@@ -31,7 +33,8 @@ export default function RunCleanupButton({ user, onStatus, onCategorized }) {
         throw new Error('User email not found in user object')
       }
       const resp = await axios.post('/api/email/emails/categorize', {
-        user_email: userEmail
+        user_email: userEmail,
+        num_emails: numEmails
       })
       if (onCategorized) onCategorized(resp.data.folders)
     } catch (err) {
@@ -42,7 +45,17 @@ export default function RunCleanupButton({ user, onStatus, onCategorized }) {
   }
 
   return (
-    <div className="flex gap-4 mt-4">
+    <div className="flex gap-4 mt-4 items-center">
+      <label className="text-sm font-medium"># Emails:
+        <input
+          type="number"
+          min={1}
+          max={500}
+          value={numEmails}
+          onChange={e => setNumEmails(Number(e.target.value))}
+          className="ml-2 w-20 px-2 py-1 border rounded"
+        />
+      </label>
       <button
         disabled={loading}
         onClick={runFetchRawEmails}

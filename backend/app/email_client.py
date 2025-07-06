@@ -34,10 +34,9 @@ def get_access_token(user_email):
     return token.access_token
 
 # Function to GET /me/messages?$top=50
-def fetch_messages(user_email):
+def fetch_messages(user_email, num_emails=50):
     access_token = get_access_token(user_email)
-    # Request bodyPreview (plain text), subject, id, and from (sender info)
-    url = "https://graph.microsoft.com/v1.0/me/messages?$top=50&$select=id,subject,bodyPreview,body,from"
+    url = f"https://graph.microsoft.com/v1.0/me/messages?$top={num_emails}&$select=id,subject,bodyPreview,body,from"
     headers = {"Authorization": f"Bearer {access_token}"}
     resp = requests.get(url, headers=headers)
     if resp.status_code != 200:
@@ -49,6 +48,7 @@ def fetch_messages(user_email):
 class RunCleanseRequest(BaseModel):
     user_email: str
     dry_run: bool = True
+    num_emails: int = 50
 
 # Aggressive plain-text cleaner for email snippets
 def clean_snippet(text):
@@ -150,8 +150,9 @@ def extract_main_text(body):
 async def get_raw_emails(request: RunCleanseRequest):
     try:
         user_email = request.user_email
-        logger.info("/emails/raw endpoint called. user_email=%s", user_email)
-        messages = fetch_messages(user_email)
+        num_emails = getattr(request, 'num_emails', 50)
+        logger.info("/emails/raw endpoint called. user_email=%s num_emails=%d", user_email, num_emails)
+        messages = fetch_messages(user_email, num_emails=num_emails)
         emails = []
         for m in messages:
             email_id = m.get("id")
@@ -183,8 +184,9 @@ async def get_raw_emails(request: RunCleanseRequest):
 async def categorize_emails(request: RunCleanseRequest):
     try:
         user_email = request.user_email
-        logger.info("/emails/categorize endpoint called. user_email=%s", user_email)
-        messages = fetch_messages(user_email)
+        num_emails = getattr(request, 'num_emails', 50)
+        logger.info("/emails/categorize endpoint called. user_email=%s num_emails=%d", user_email, num_emails)
+        messages = fetch_messages(user_email, num_emails=num_emails)
         emails = []
         for m in messages:
             email_id = m.get("id")
