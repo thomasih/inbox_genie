@@ -58,6 +58,7 @@ class LLMEmailCategorizer:
                 "Do not omit or repeat any IDs. Do not create duplicate folders. "
                 "Each email ID must appear in one and only one category. "
                 "Output ONLY a single valid JSON object in the format: {\"Category 1\": [\"id1\", \"id2\"], ... , \"Other\": [\"id4\"]}. "
+                "NEVER output more than one JSON object. NEVER output two JSON objects, or any text after the JSON. "
                 "Do not include any explanation, extra text, markdown, or code block. Use only the provided email IDs. "
                 "At the end of the JSON object, add a key 'Summary' with the total number of unique IDs assigned. "
                 "Do not include any trailing commas before closing brackets or braces. "
