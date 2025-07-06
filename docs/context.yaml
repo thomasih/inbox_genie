@@ -1,160 +1,136 @@
-project\_name: InboxGenie
+project_name: InboxGenie
 overview: |
-InboxGenie is a Python-and-React web application that integrates with Microsoft Graph and Azure OpenAI (gpt-3.5-turbo) to help users condense and organize their emails. It streamlines mailbox management by extracting sender, subject, and snippet for each email, and uses a cloud LLM for robust, cost-conscious foldering into a fixed set of categories. The app is Dockerized and Azure-deployable.
+  InboxGenie is a Python-and-React web application that integrates with Microsoft Graph and Azure OpenAI (gpt-3.5-turbo) to help users condense and organize their emails. It streamlines mailbox management by extracting sender, subject, and snippet for each email, and uses a cloud LLM for robust, cost-conscious foldering into a fixed set of categories. The app is Dockerized and Azure-deployable.
 
-repository\_structure: |
-.
-├── README.md               # High-level overview & quickstart
-├── .gitignore              # Ignored files (env, venv, cache, logs)
-├── copilot.config.json     # Copilot agent config (default context: docs/roadmap.yaml)
-├── docs/
-│   └── roadmap.yaml        # Project goals, constraints, and roadmap
-├── tokens.db               # SQLite DB for OAuth tokens
-├── frontend/
-│   ├── Dockerfile          # Multi-stage build and Nginx deploy
-│   ├── index.html          # HTML entrypoint
-│   ├── package.json        # Frontend dependencies & scripts
-│   ├── vite.config.js      # Dev server & proxy to backend
-│   ├── tailwind.config.js  # Tailwind setup
-│   ├── postcss.config.js   # PostCSS plugins
-│   └── src/
-│       ├── main.jsx        # App bootstrap
-│       ├── App.jsx         # Root component
-│       └── components/
-│           ├── ConnectMailbox.jsx      # MSAL login
-│           ├── RunCleanupButton.jsx    # Triggers email fetch
-│           ├── StatusCard.jsx         # Processing summary
-│           ├── RawEmailResults.jsx    # Flat email preview
-│           └── CategorizedEmailResults.jsx # Grouped email display
-└── backend/
-    ├── Dockerfile          # Build image for Azure/AKS
-    ├── requirements.txt    # Python dependencies
-    ├── app/
-    │   ├── main.py         # FastAPI app, routers & endpoints
-    │   ├── auth.py         # OAuth (MSAL) flow & token persistence
-    │   ├── email\_client.py # Fetch and condense emails
-    │   ├── llm\_categorizer.py # LLM batching, prompt, parsing, error handling
-    │   ├── db.py           # SQLAlchemy engine & session setup
-    │   └── models\_token.py # Token model (user\_email, tokens)
-    └── tests/
-        └── ...
+repository_structure: |
+  .
+  ├── README.md               # High-level overview & quickstart
+  ├── .gitignore              # Ignored files (env, venv, cache, logs)
+  ├── copilot.config.json     # Copilot agent config (default context: docs/roadmap.yaml)
+  ├── docs/
+  │   └── roadmap.yaml        # Project goals, constraints, and roadmap
+  ├── tokens.db               # SQLite DB for OAuth tokens
+  ├── frontend/
+  │   ├── Dockerfile          # Multi-stage build and Nginx deploy
+  │   ├── index.html          # HTML entrypoint
+  │   ├── package.json        # Frontend dependencies & scripts
+  │   ├── vite.config.js      # Dev server & proxy to backend
+  │   ├── tailwind.config.js  # Tailwind setup
+  │   ├── postcss.config.js   # PostCSS plugins
+  │   └── src/
+  │       ├── main.jsx        # App bootstrap
+  │       ├── App.jsx         # Root component
+  │       └── components/     # Modern, fully revamped UI components
+  │           ├── ConnectMailbox.jsx      # MSAL login
+  │           ├── RunCleanupButton.jsx    # Triggers email fetch, user can select number of emails
+  │           ├── StatusCard.jsx         # Processing summary
+  │           ├── RawEmailResults.jsx    # Flat email preview
+  │           └── CategorizedEmailResults.jsx # Grouped email display
+  └── backend/
+      ├── Dockerfile          # Build image for Azure/AKS
+      ├── requirements.txt    # Python dependencies
+      ├── app/
+      │   ├── main.py         # FastAPI app, routers & endpoints
+      │   ├── auth.py         # OAuth (MSAL) flow & token persistence
+      │   ├── email_client.py # Fetch and condense emails
+      │   ├── llm_categorizer.py # LLM batching, prompt, parsing, error handling
+      │   ├── db.py           # SQLAlchemy engine & session setup
+      │   ├── models_token.py # Token model (user_email, tokens)
+      │   └── tests/          # Backend tests
+      │       └── ...
 
-backend\_details:
-fastapi\_app:
-routers:
-auth:
-\- path: /api/auth/login
-\- path: /api/auth/callback
-email:
-\- path: /api/email/emails/raw (POST, expects user\_email)
-\- path: /api/email/store-token (expects JSON body with user\_email and access\_token via Pydantic model)
-global\_endpoints:
-\- /api/health
-logging: "Structured with inboxgenie.\* loggers (INFO & error handling)"
-authentication:
-env\_vars:
-\- AZURE\_CLIENT\_ID
-\- AZURE\_CLIENT\_SECRET
-\- AZURE\_TENANT\_ID
-library: "MSAL"
-storage: "SQLite via SQLAlchemy (tokens.db)"
-email\_processing:
-steps:
-fetch: "Retrieve top 50 messages via Microsoft Graph"
-condense: "Extract sender, subject, and snippet for each email"
-categorize: |
-Categorize emails into a fixed set of categories using Azure OpenAI (gpt-3.5-turbo). The backend sends batches of emails to the LLM, instructing it to assign each email to exactly one of the allowed categories (plus 'Other' for uncategorizable emails). The backend robustly parses and repairs LLM output, deduplicates IDs, ensures all emails are categorized, and filters out empty categories except 'Other'.
-response: "JSON with grouped emails per category (no empty or redundant folders, 'Other' always last)"
-llm\_categorizer:
-batching: "Batches of 5 emails sent to LLM to avoid output truncation."
-categories: |
-Fixed set: Finance, News, Technology, Shopping, Education, Travel, Utilities, Transportation, Music, Real Estate, Events, Entertainment, Job Opportunities, Other.
-json\_repair: |
-Uses demjson3 for robust fallback parsing. Pre-repair step adds missing comma before 'Summary' if needed to handle LLM output quirks.
-error\_handling: |
-If LLM output is truncated or cannot be parsed, returns a user-friendly error. Logs all issues.
-deduplication: |
-Ensures each email ID appears in only one category. Any missing IDs are added to 'Other'.
-filtering: |
-Only non-empty categories (plus 'Other') are returned to the frontend. 'Other' is always last.
+backend_details:
+  fastapi_app:
+    routers:
+      auth:
+        - path: /api/auth/login
+        - path: /api/auth/callback
+      email:
+        - path: /api/email/emails/raw (POST, expects user_email, num_emails)
+        - path: /api/email/store-token (expects JSON body with user_email and access_token via Pydantic model)
+    global_endpoints:
+      - /api/health
+  logging: "Structured with inboxgenie.* loggers (INFO & error handling)"
+  authentication:
+    env_vars:
+      - AZURE_CLIENT_ID
+      - AZURE_CLIENT_SECRET
+      - AZURE_TENANT_ID
+    library: "MSAL"
+    storage: "SQLite via SQLAlchemy (tokens.db)"
+  email_processing:
+    steps:
+      fetch: "Retrieve user-selected number of messages via Microsoft Graph (default 50)"
+      condense: "Extract sender, subject, and snippet for each email"
+      categorize: |
+        Categorize emails into a fixed set of categories using Azure OpenAI (gpt-3.5-turbo). The backend sends batches of emails to the LLM, instructing it to assign each email to exactly one of the allowed categories (plus 'Other' for uncategorizable emails). The backend robustly parses and repairs LLM output, deduplicates IDs, ensures all emails are categorized, and filters out empty categories except 'Other'.
+    response: "JSON with grouped emails per category (no empty or redundant folders, 'Other' always last)"
+  llm_categorizer:
+    batching: "Batches of 5 emails sent to LLM to avoid output truncation."
+    categories: |
+      Fixed set: Finance, News, Technology, Shopping, Education, Travel, Utilities, Transportation, Music, Real Estate, Events, Entertainment, Job Opportunities, Other.
+    json_repair: |
+      Uses demjson3 for robust fallback parsing. Pre-repair step adds missing comma before 'Summary' if needed to handle LLM output quirks.
+    error_handling: |
+      If LLM output is truncated or cannot be parsed, returns a user-friendly error. Logs all issues.
+    deduplication: |
+      Ensures each email ID appears in only one category. Any missing IDs are added to 'Other'.
+    filtering: |
+      Only non-empty categories (plus 'Other') are returned to the frontend. 'Other' is always last.
 
-data\_persistence:
-database: "SQLite (tokens.db), configurable via DATABASE\_URL"
-orm: "SQLAlchemy, auto-creates tables on startup"
+data_persistence:
+  database: "SQLite (tokens.db), configurable via DATABASE_URL"
+  orm: "SQLAlchemy, auto-creates tables on startup"
 
-frontend\_details:
-tech\_stack:
-\- React 18
-\- Vite
-\- Tailwind CSS
-\- MSAL Browser
-\- Axios
-auth\_flow: "ConnectMailbox triggers MSAL popup, acquires access token, and posts it to backend via /api/email/store-token before proceeding"
-token\_storage: "Frontend posts access token and user\_email to /api/email/store-token after login; backend stores/updates token in DB via Pydantic model request"
-pipeline\_trigger: "RunCleanupButton posts user\_email to /api/email/emails/raw"
-components:
-StatusCard: "Shows counts, timestamp"
-RawEmailResults: "Previews flat list of emails with subject, snippet, sender"
-CategorizedEmailResults: "Displays grouped emails per category, only showing non-empty categories."
-dev\_proxy: "Vite proxies /api to [http://localhost:8000](http://localhost:8000)"
-llm\_categorization: "User can trigger LLM-based categorization. Only fixed categories are shown, with robust error handling."
-
-configuration:
-env\_vars:
-AZURE\_CLIENT\_ID: "Azure AD client ID"
-AZURE\_CLIENT\_SECRET: "Azure AD client secret"
-AZURE\_TENANT\_ID: "Azure AD tenant ID"
-EMAIL\_SCOPES: "Mail.ReadWrite"
-DATABASE\_URL: "Optional, defaults to sqlite:///./tokens.db"
-AZURE\_OPENAI\_DEPLOYMENT: "Azure OpenAI deployment name (gpt-3.5-turbo)"
-AZURE\_OPENAI\_ENDPOINT: "Azure OpenAI endpoint URL"
-AZURE\_OPENAI\_API\_KEY: "Azure OpenAI API key"
-AZURE\_OPENAI\_API\_VERSION: "Azure OpenAI API version (default: 2024-12-01-preview)"
-USE\_LLM: "Set to 'true' to enable LLM categorization"
-copilot\_config: "Default context file: docs/roadmap.yaml"
+frontend_details:
+  tech_stack:
+    - React 18
+    - Vite
+    - Tailwind CSS
+    - MSAL Browser
+    - Axios
+  auth_flow: "ConnectMailbox triggers MSAL popup, acquires access token, and posts it to backend via /api/email/store-token before proceeding"
+  token_storage: "Frontend posts access token and user_email to /api/email/store-token after login; backend stores/updates token in DB via Pydantic model request"
+  pipeline_trigger: "RunCleanupButton posts user_email and num_emails to /api/email/emails/raw"
+  components:
+    StatusCard: "Shows counts, timestamp"
+    RawEmailResults: "Previews flat list of emails with subject, snippet, sender"
+    CategorizedEmailResults: "Displays grouped emails per category, only showing non-empty categories."
+  dev_proxy: "Vite proxies /api to http://localhost:8000"
+  llm_categorization: "User can trigger LLM-based categorization. Only fixed categories are shown, with robust error handling."
+  ui: "Modern, fully revamped UI for improved UX and usability."
 
 deployment:
-docker:
-backend: "Python 3.11 slim, runs uvicorn on port 80"
-frontend: "Multi-stage Node build, serves via Nginx"
-cloud:
-\- "Azure App Service / AKS (backend)"
-\- "Azure Static Web Apps (frontend)"
-infrastructure: "Terraform mentioned in roadmap (infra folder not in repo)"
+  docker:
+    backend: "Python 3.11 slim, runs uvicorn on port 80"
+    frontend: "Multi-stage Node build, serves via Nginx"
+  cloud:
+    - "Azure App Service / AKS (backend)"
+    - "Azure Static Web Apps (frontend)"
+  infrastructure: "Terraform planned (infra folder not in repo)"
 
-testing\_ci:
-tests: "No ML/LLM pipeline tests remain"
-ci\_cd: "Planned GitHub Actions per roadmap"
+configuration:
+  env_vars:
+    AZURE_CLIENT_ID: "Azure AD client ID"
+    AZURE_CLIENT_SECRET: "Azure AD client secret"
+    AZURE_TENANT_ID: "Azure AD tenant ID"
+    EMAIL_SCOPES: "Mail.ReadWrite"
+    DATABASE_URL: "Optional, defaults to sqlite:///./tokens.db"
+    AZURE_OPENAI_DEPLOYMENT: "Azure OpenAI deployment name (gpt-3.5-turbo)"
+    AZURE_OPENAI_ENDPOINT: "Azure OpenAI endpoint URL"
+    AZURE_OPENAI_API_KEY: "Azure OpenAI API key"
+    AZURE_OPENAI_API_VERSION: "Azure OpenAI API version (default: 2024-12-01-preview)"
+    USE_LLM: "Set to 'true' to enable LLM categorization"
+    copilot_config: "Default context file: docs/roadmap.yaml"
+
+testing_ci:
+  tests: "Backend tests implemented in backend/tests/. No ML/LLM pipeline tests remain."
+  ci_cd: "Planned GitHub Actions per roadmap"
 
 roadmap:
-
-* "OAuth via MSAL"
-* "Batch email fetch & move"
-* "Cloud LLM-based classification & folder mapping (planned)"
-* "Undo support"
-* "React dashboard UX enhancements"
-* "CI/CD and Terraform automation"
-
-summary\_of\_2025\_07\_04\_changes: |
-- Migrated all email categorization to Azure OpenAI (gpt-3.5-turbo), removing legacy ML/LLM code.
-- Implemented robust backend batching (default 5 emails per batch) to avoid LLM output truncation.
-- Defined a fixed set of categories for LLM to use, eliminating redundant/overlapping folders.
-- Updated LLM prompt to strictly enforce use of only allowed categories (plus 'Other').
-- Added robust JSON repair: uses demjson3 for fallback parsing, and a regex pre-repair step to fix missing commas before 'Summary'.
-- Backend now deduplicates IDs, ensures every email is categorized exactly once, and adds any missing IDs to 'Other'.
-- Filters out empty categories (except 'Other'), and always returns 'Other' last.
-- Improved error handling: user-friendly errors if LLM output is truncated or malformed.
-- Frontend now displays only non-empty, allowed categories, with no redundant or empty folders.
-- All changes are cost-conscious, with caching and mocking for dev/testing.
-- Logging improved for all error and edge cases.
-
-summary_of_2025_07_06_changes: |
-- Users can now select the number of recent emails to process (instead of a fixed 50). Both backend and frontend support a `num_emails` parameter.
-- Backend endpoints `/api/email/emails/raw` and `/api/email/emails/categorize` accept and use `num_emails` (default 50 if not provided).
-- Frontend UI (RunCleanupButton) includes a number input for users to choose how many emails to fetch/categorize, passing this value to the backend.
-- All previous logic (batching, categorization, error handling, etc.) remains, but now operates on a user-defined number of emails.
-- Backend now recursively fetches all folders (including subfolders) for robust folder management, ensuring correct folder ID resolution even with duplicate names or subfolders.
-- If a folder already exists (409 error), the backend refreshes the folder map and uses the correct ID, making folder creation robust.
-- After undo, the backend automatically deletes any empty folders created by the app, cleaning up the mailbox.
-- Undo is now robust and production-grade, restoring emails and cleaning up folders even in complex mailbox structures.
-- Docs and context updated to reflect these new features and robustness improvements.
+  - "OAuth via MSAL"
+  - "Batch email fetch & move"
+  - "Cloud LLM-based classification & folder mapping"
+  - "Undo support"
+  - "React dashboard UX enhancements"
+  - "CI/CD and Terraform automation"
