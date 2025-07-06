@@ -256,6 +256,8 @@ async def categorize_emails(request: RunCleanseRequest):
     try:
         user_email = request.user_email
         num_emails = getattr(request, 'num_emails', 50)
+        if num_emails > 50:
+            return JSONResponse({"error": "Maximum number of emails that can be organized at once is 50."}, status_code=400)
         logger.info("/emails/categorize endpoint called. user_email=%s num_emails=%d", user_email, num_emails)
         messages = fetch_messages(user_email, num_emails=num_emails)
         emails = []

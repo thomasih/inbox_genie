@@ -1,5 +1,6 @@
 import React from 'react';
 import { PublicClientApplication } from '@azure/msal-browser';
+import axios from 'axios';
 
 const msalConfig = {
   auth: {
@@ -13,6 +14,17 @@ export default function ConnectMailbox({ onLogin }) {
 
   const handleLogin = async () => {
     const response = await pca.loginPopup({ scopes: ['Mail.ReadWrite'] });
+    // Acquire the access token for Microsoft Graph
+    const tokenResponse = await pca.acquireTokenSilent({
+      scopes: ['Mail.ReadWrite'],
+      account: response.account
+    });
+    // Send the access token to the backend
+    await axios.post('/api/email/store-token', {
+      user_email: response.account.username,
+      access_token: tokenResponse.accessToken
+      // Optionally: refresh_token, expires_at
+    });
     onLogin(response.account);
   };
 
