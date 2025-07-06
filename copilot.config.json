@@ -1,5 +1,5 @@
 {
-  "name": "inboxzen",
+  "name": "Inbox Genie",
   "description": "FastAPI + React app to AI-sort emails via Microsoft Graph.",
   "default_context_files": [
     "docs/roadmap.yaml",

@@ -6,7 +6,7 @@ from fastapi.requests import Request as FastAPIRequest
 from fastapi.responses import JSONResponse as FastAPIJSONResponse
 import logging
 
-app = FastAPI(title="InboxZen API")
+app = FastAPI(title="Inbox Genie API")
 
 # Configure logger
 logger = logging.getLogger("inboxgenie.main")

@@ -26,7 +26,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
-      <h1 className="text-3xl font-bold mb-6">InboxZen</h1>
+      <h1 className="text-3xl font-bold mb-6">Inbox Genie</h1>
       {!user
         ? <ConnectMailbox onLogin={setUser} />
         : (
