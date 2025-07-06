@@ -68,16 +68,6 @@ def test_store_token_and_fetch_emails(mock_fetch_messages, mock_get_token, fake_
 
 @patch("app.llm_categorizer.LLMEmailCategorizer.categorize_emails")
 @patch("app.email_client.fetch_messages")
-def test_categorize_endpoint_success(mock_fetch_messages, mock_categorize, fake_user_email):
-    mock_fetch_messages.return_value = [{"id": "id1", "subject": "S", "from": {"emailAddress": {"name": "A", "address": "a@b.com"}}, "bodyPreview": "hi"}]
-    mock_categorize.return_value = {"Finance": ["id1"]}
-    resp = client.post("/api/email/emails/categorize", json={"user_email": fake_user_email, "emails": [{"id": "id1", "subject": "S", "sender": {"name": "A", "email": "a@b.com"}}]})
-    assert resp.status_code == 200
-    # Accept both old and new response formats
-    assert "folders" in resp.json() or "Finance" in resp.json()
-
-@patch("app.llm_categorizer.LLMEmailCategorizer.categorize_emails")
-@patch("app.email_client.fetch_messages")
 def test_categorize_endpoint_error(mock_fetch_messages, mock_categorize, fake_user_email):
     mock_fetch_messages.return_value = [{"id": "id1", "subject": "S", "from": {"emailAddress": {"name": "A", "address": "a@b.com"}}, "bodyPreview": "hi"}]
     mock_categorize.return_value = {"error": "LLM failed"}

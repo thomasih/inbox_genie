@@ -153,4 +153,8 @@ summary_of_2025_07_06_changes: |
 - Backend endpoints `/api/email/emails/raw` and `/api/email/emails/categorize` accept and use `num_emails` (default 50 if not provided).
 - Frontend UI (RunCleanupButton) includes a number input for users to choose how many emails to fetch/categorize, passing this value to the backend.
 - All previous logic (batching, categorization, error handling, etc.) remains, but now operates on a user-defined number of emails.
-- Docs and context updated to reflect this new user-configurable email count feature.
+- Backend now recursively fetches all folders (including subfolders) for robust folder management, ensuring correct folder ID resolution even with duplicate names or subfolders.
+- If a folder already exists (409 error), the backend refreshes the folder map and uses the correct ID, making folder creation robust.
+- After undo, the backend automatically deletes any empty folders created by the app, cleaning up the mailbox.
+- Undo is now robust and production-grade, restoring emails and cleaning up folders even in complex mailbox structures.
+- Docs and context updated to reflect these new features and robustness improvements.
