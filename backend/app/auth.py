@@ -7,6 +7,7 @@ import logging
 from .db import SessionLocal
 from .models_token import Token
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 router = APIRouter()
 
@@ -18,6 +19,16 @@ TENANT_ID = os.getenv("AZURE_TENANT_ID")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 REDIRECT_PATH = "/api/auth/callback"
 SCOPE = ["User.Read", "Mail.ReadWrite"]
+
+missing_vars = []
+if not CLIENT_ID:
+    missing_vars.append("AZURE_CLIENT_ID")
+if not CLIENT_SECRET:
+    missing_vars.append("AZURE_CLIENT_SECRET")
+if not TENANT_ID:
+    missing_vars.append("AZURE_TENANT_ID")
+if missing_vars:
+    raise RuntimeError(f"Missing required environment variables for auth: {', '.join(missing_vars)}. Check your .env file or environment.")
 
 logger = logging.getLogger("inboxgenie.auth")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
@@ -73,3 +84,17 @@ async def callback(request: Request, code: str):
     except Exception as e:
         logger.exception("Exception in auth callback")
         return JSONResponse({"error": str(e)}, status_code=500)
+
+def store_token(session: Session, user_email: str, access_token: str, refresh_token: str, expires_at):
+    token = session.query(Token).filter(Token.user_email == user_email).first()
+    if token:
+        token.access_token = access_token
+        token.refresh_token = refresh_token
+        token.expires_at = expires_at
+    else:
+        token = Token(user_email=user_email, access_token=access_token, refresh_token=refresh_token, expires_at=expires_at)
+        session.add(token)
+    session.commit()
+
+def get_token(session: Session, user_email: str):
+    return session.query(Token).filter(Token.user_email == user_email).first()

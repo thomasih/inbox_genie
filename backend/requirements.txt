@@ -9,6 +9,9 @@ sqlalchemy
 psycopg2-binary
 redis
 pytest
+pytest-mock
+pytest-asyncio
+pytest-cov
 httpx
 sentence-transformers
 scikit-learn

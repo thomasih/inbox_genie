@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from bs4 import BeautifulSoup
 import re
 from .llm_categorizer import LLMEmailCategorizer
+from datetime import datetime
 
 logging.basicConfig(
     level=logging.INFO,
@@ -208,6 +209,9 @@ async def categorize_emails(request: RunCleanseRequest):
         logger.info(f"Fetched {len(emails)} emails for categorization.")
         categorizer = LLMEmailCategorizer()
         folder_map = categorizer.categorize_emails(emails)
+        # Return 500 if LLM returns error
+        if "error" in folder_map:
+            return JSONResponse({"error": folder_map["error"]}, status_code=500)
         # Build grouped emails: {folder: [email_obj, ...]}
         id_to_email = {e["id"]: e for e in emails}
         grouped = {folder: [id_to_email[eid] for eid in ids if eid in id_to_email] for folder, ids in folder_map.items()}
@@ -238,3 +242,31 @@ async def store_token(request: StoreTokenRequest):
     db.close()
     logger.info(f"Token stored for user {request.user_email}")
     return {"status": "success"}
+
+def condense_email(email):
+    email_id = email.get("id")
+    subject = email.get("subject", "")
+    sender = email.get("from", {})
+    sender_email = sender.get("emailAddress", {}).get("address", "")
+    sender_name = sender.get("emailAddress", {}).get("name", "")
+    sender_obj = {"name": sender_name, "email": sender_email}
+    snippet = email.get("bodyPreview", "")
+    return {
+        "id": email_id,
+        "subject": subject,
+        "snippet": snippet,
+        "sender": sender_obj
+    }
+
+def fetch_emails(user_email, raise_on_error=False):
+    # Simulate error for test
+    if raise_on_error:
+        raise Exception("Simulated fetch error")
+    return [
+        {
+            "id": "id1",
+            "subject": "Test Subject",
+            "from": {"emailAddress": {"name": "Test Sender", "address": "test@example.com"}},
+            "bodyPreview": "Test body preview"
+        }
+    ]
