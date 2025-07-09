@@ -84,7 +84,12 @@ def test_undo_deletes_empty_folders(mock_token, mock_delete, mock_get, mock_move
         MagicMock(email_id="eid", from_folder="fid", to_folder="tid", undone=False)
     ]
     mock_move.return_value = {"id": "eid2"}
-    mock_get.return_value = MagicMock(status_code=200, json=lambda: {"value": []})
+    def get_side_effect(url, *args, **kwargs):
+        if "/mailFolders" in url:
+            # Return a folder list with an Inbox
+            return MagicMock(status_code=200, json=lambda: {"value": [{"displayName": "Inbox", "id": "inbox_id"}]})
+        return MagicMock(status_code=200, json=lambda: {"value": []})
+    mock_get.side_effect = get_side_effect
     mock_delete.return_value = MagicMock(status_code=204)
     with patch("app.email_client.SessionLocal", return_value=db):
         # undo_last_sort is async, so run it in event loop
