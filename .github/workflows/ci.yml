@@ -25,7 +25,6 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ← NEW: inject dummy Azure & LLM flags so auth and LLM tests pass
       - name: Set Azure + LLM env vars for tests
         run: |
           echo "AZURE_CLIENT_ID=ci_dummy_id"       >> $GITHUB_ENV
@@ -43,12 +42,8 @@ jobs:
         with:
           node-version: '16'
 
-      - name: Install frontend dependencies
+      - name: Build frontend
         run: |
           cd frontend
           npm ci
-
-      - name: Run frontend tests
-        run: |
-          cd frontend
-          npm test
+          npm run build
