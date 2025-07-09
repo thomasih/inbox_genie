@@ -18,4 +18,5 @@ scikit-learn
 transformers
 beautifulsoup4
 html2text
-demjson3alembic
+demjson3
+alembic
