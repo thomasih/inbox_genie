@@ -25,6 +25,14 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      # ← NEW: inject dummy Azure & LLM flags so auth and LLM tests pass
+      - name: Set Azure + LLM env vars for tests
+        run: |
+          echo "AZURE_CLIENT_ID=ci_dummy_id"       >> $GITHUB_ENV
+          echo "AZURE_CLIENT_SECRET=ci_dummy_secret" >> $GITHUB_ENV
+          echo "AZURE_TENANT_ID=ci_dummy_tenant"     >> $GITHUB_ENV
+          echo "USE_LLM=true"                        >> $GITHUB_ENV
+
       - name: Run backend tests
         run: |
           cd backend
