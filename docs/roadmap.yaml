@@ -1,26 +1,20 @@
-project: “Inbox Genie”
-description: |
-  A Python-based SaaS that uses Microsoft Graph + OpenAI 
-  to classify & batch-move emails into folders.
+short_term:
+  timeframe: "next 2 weeks"
+  tasks:
+    - Add a .env.example and centralize all environment variables
+    - Move any checked-in database files to .gitignore and set up Alembic migrations
+    - Split email-fetch and classification into two clear modules
 
-goals:
-  - OAuth via MSAL (Mail.ReadWrite)
-  - Fetch & batch emails
-  - GPT-based classification + folder mapping
-  - Move emails, record undo
-  - React UI for connect, run, results
+medium_term:
+  timeframe: "1-2 months"
+  tasks:
+    - Refactor LLM categorizer to be fully async using httpx.AsyncClient
+    - Implement batch classification and simple in-memory caching
+    - Modernise frontend data fetching with React Query/SWR and improve loading/error states
 
-constraints:
-  - Python (FastAPI) backend
-  - GDPR: no long-term raw storage
-  - Dockerized, deployable to Azure
-  - CI/CD: GitHub Actions
-
-steps:
-  - Scaffold backend
-  - Implement OAuth flow
-  - Graph API fetch/send
-  - AI classifier module
-  - Email mover + undo
-  - React dashboard
-  - CI/CD + Terraform infra
+long_term:
+  timeframe: "3+ months"
+  tasks:
+    - Set up CI/CD pipelines (GitHub Actions) for tests and Docker builds
+    - Define Terraform infrastructure for Azure deployment
+    - Add “undo” support, action logs, and advanced folder-mapping UI

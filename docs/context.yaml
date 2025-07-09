@@ -1,136 +1,45 @@
 project_name: InboxGenie
 overview: |
-  InboxGenie is a Python-and-React web application that integrates with Microsoft Graph and Azure OpenAI (gpt-3.5-turbo) to help users condense and organize their emails. It streamlines mailbox management by extracting sender, subject, and snippet for each email, and uses a cloud LLM for robust, cost-conscious foldering into a fixed set of categories. The app is Dockerized and Azure-deployable.
+  InboxGenie is a Dockerized Python (FastAPI) + React web application that integrates
+  Microsoft Graph and OpenAI to automatically classify and sort your email into a
+  customizable set of folders.
 
 repository_structure: |
   .
   ├── README.md               # High-level overview & quickstart
-  ├── .gitignore              # Ignored files (env, venv, cache, logs)
-  ├── copilot.config.json     # Copilot agent config (default context: docs/roadmap.yaml)
+  ├── .gitignore              # Ignore node_modules, venv, .env, *.db
+  ├── .env.example            # Sample environment variables
+  ├── copilot.config.json     # Copilot AI assistant config
   ├── docs/
-  │   └── roadmap.yaml        # Project goals, constraints, and roadmap
-  ├── tokens.db               # SQLite DB for OAuth tokens
+  │   ├── context.yaml        # This file: project context & config
+  │   └── roadmap.yaml        # Goals, milestones, and future work
+  ├── backend/
+  │   ├── Dockerfile          # Build & run backend API
+  │   ├── requirements.txt    # Python dependencies
+  │   ├── app/                # FastAPI app modules & services
+  │   └── tests/              # Pytest unit & integration tests
   ├── frontend/
-  │   ├── Dockerfile          # Multi-stage build and Nginx deploy
-  │   ├── index.html          # HTML entrypoint
+  │   ├── Dockerfile          # Build & serve static React app
   │   ├── package.json        # Frontend dependencies & scripts
-  │   ├── vite.config.js      # Dev server & proxy to backend
-  │   ├── tailwind.config.js  # Tailwind setup
-  │   ├── postcss.config.js   # PostCSS plugins
-  │   └── src/
-  │       ├── main.jsx        # App bootstrap
-  │       ├── App.jsx         # Root component
-  │       └── components/     # Modern, fully revamped UI components
-  │           ├── ConnectMailbox.jsx      # MSAL login
-  │           ├── RunCleanupButton.jsx    # Triggers email fetch, user can select number of emails
-  │           ├── StatusCard.jsx         # Processing summary
-  │           ├── RawEmailResults.jsx    # Flat email preview
-  │           └── CategorizedEmailResults.jsx # Grouped email display
-  └── backend/
-      ├── Dockerfile          # Build image for Azure/AKS
-      ├── requirements.txt    # Python dependencies
-      ├── app/
-      │   ├── main.py         # FastAPI app, routers & endpoints
-      │   ├── auth.py         # OAuth (MSAL) flow & token persistence
-      │   ├── email_client.py # Fetch and condense emails
-      │   ├── llm_categorizer.py # LLM batching, prompt, parsing, error handling
-      │   ├── db.py           # SQLAlchemy engine & session setup
-      │   ├── models_token.py # Token model (user_email, tokens)
-      │   └── tests/          # Backend tests
-      │       └── ...
+  │   └── src/                # React components & pages
+  ├── alembic/                # Database migrations
+  └── terraform/              # (planned) Infra as code
 
-backend_details:
-  fastapi_app:
-    routers:
-      auth:
-        - path: /api/auth/login
-        - path: /api/auth/callback
-      email:
-        - path: /api/email/emails/raw (POST, expects user_email, num_emails)
-        - path: /api/email/store-token (expects JSON body with user_email and access_token via Pydantic model)
-    global_endpoints:
-      - /api/health
-  logging: "Structured with inboxgenie.* loggers (INFO & error handling)"
-  authentication:
-    env_vars:
-      - AZURE_CLIENT_ID
-      - AZURE_CLIENT_SECRET
-      - AZURE_TENANT_ID
-    library: "MSAL"
-    storage: "SQLite via SQLAlchemy (tokens.db)"
-  email_processing:
-    steps:
-      fetch: "Retrieve user-selected number of messages via Microsoft Graph (default 50)"
-      condense: "Extract sender, subject, and snippet for each email"
-      categorize: |
-        Categorize emails into a fixed set of categories using Azure OpenAI (gpt-3.5-turbo). The backend sends batches of emails to the LLM, instructing it to assign each email to exactly one of the allowed categories (plus 'Other' for uncategorizable emails). The backend robustly parses and repairs LLM output, deduplicates IDs, ensures all emails are categorized, and filters out empty categories except 'Other'.
-    response: "JSON with grouped emails per category (no empty or redundant folders, 'Other' always last)"
-  llm_categorizer:
-    batching: "Batches of 5 emails sent to LLM to avoid output truncation."
-    categories: |
-      Fixed set: Finance, News, Technology, Shopping, Education, Travel, Utilities, Transportation, Music, Real Estate, Events, Entertainment, Job Opportunities, Other.
-    json_repair: |
-      Uses demjson3 for robust fallback parsing. Pre-repair step adds missing comma before 'Summary' if needed to handle LLM output quirks.
-    error_handling: |
-      If LLM output is truncated or cannot be parsed, returns a user-friendly error. Logs all issues.
-    deduplication: |
-      Ensures each email ID appears in only one category. Any missing IDs are added to 'Other'.
-    filtering: |
-      Only non-empty categories (plus 'Other') are returned to the frontend. 'Other' is always last.
+environment_variables: |
+  Copy `.env.example` → `.env` and fill in:
+    AZURE_TENANT_ID
+    AZURE_CLIENT_ID
+    AZURE_CLIENT_SECRET
+    OPENAI_API_KEY
+    USE_LLM=true|false         # enable LLM classification
+    CATEGORY_LIST=family,work,…
 
-data_persistence:
-  database: "SQLite (tokens.db), configurable via DATABASE_URL"
-  orm: "SQLAlchemy, auto-creates tables on startup"
-
-frontend_details:
-  tech_stack:
-    - React 18
-    - Vite
-    - Tailwind CSS
-    - MSAL Browser
-    - Axios
-  auth_flow: "ConnectMailbox triggers MSAL popup, acquires access token, and posts it to backend via /api/email/store-token before proceeding"
-  token_storage: "Frontend posts access token and user_email to /api/email/store-token after login; backend stores/updates token in DB via Pydantic model request"
-  pipeline_trigger: "RunCleanupButton posts user_email and num_emails to /api/email/emails/raw"
-  components:
-    StatusCard: "Shows counts, timestamp"
-    RawEmailResults: "Previews flat list of emails with subject, snippet, sender"
-    CategorizedEmailResults: "Displays grouped emails per category, only showing non-empty categories."
-  dev_proxy: "Vite proxies /api to http://localhost:8000"
-  llm_categorization: "User can trigger LLM-based categorization. Only fixed categories are shown, with robust error handling."
-  ui: "Modern, fully revamped UI for improved UX and usability."
-
-deployment:
-  docker:
-    backend: "Python 3.11 slim, runs uvicorn on port 80"
-    frontend: "Multi-stage Node build, serves via Nginx"
-  cloud:
-    - "Azure App Service / AKS (backend)"
-    - "Azure Static Web Apps (frontend)"
-  infrastructure: "Terraform planned (infra folder not in repo)"
-
-configuration:
-  env_vars:
-    AZURE_CLIENT_ID: "Azure AD client ID"
-    AZURE_CLIENT_SECRET: "Azure AD client secret"
-    AZURE_TENANT_ID: "Azure AD tenant ID"
-    EMAIL_SCOPES: "Mail.ReadWrite"
-    DATABASE_URL: "Optional, defaults to sqlite:///./tokens.db"
-    AZURE_OPENAI_DEPLOYMENT: "Azure OpenAI deployment name (gpt-3.5-turbo)"
-    AZURE_OPENAI_ENDPOINT: "Azure OpenAI endpoint URL"
-    AZURE_OPENAI_API_KEY: "Azure OpenAI API key"
-    AZURE_OPENAI_API_VERSION: "Azure OpenAI API version (default: 2024-12-01-preview)"
-    USE_LLM: "Set to 'true' to enable LLM categorization"
-    copilot_config: "Default context file: docs/roadmap.yaml"
-
-testing_ci:
-  tests: "Backend tests implemented in backend/tests/. No ML/LLM pipeline tests remain."
-  ci_cd: "Planned GitHub Actions per roadmap"
+testing_ci: |
+  - Backend tests: `pytest backend/`
+  - Frontend tests: `npm test` in `frontend/`
+  - CI/CD: GitHub Actions pipeline (planned)
 
 roadmap:
-  - "OAuth via MSAL"
-  - "Batch email fetch & move"
-  - "Cloud LLM-based classification & folder mapping"
-  - "Undo support"
-  - "React dashboard UX enhancements"
-  - "CI/CD and Terraform automation"
+  - Short-Term (next 2 weeks)
+  - Medium-Term (1–2 months)
+  - Long-Term (3+ months)
