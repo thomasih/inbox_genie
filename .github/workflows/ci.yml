@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set Azure + LLM env vars for tests
+        run: |
+          echo "AZURE_CLIENT_ID=ci_dummy_id"       >> $GITHUB_ENV
+          echo "AZURE_CLIENT_SECRET=ci_dummy_secret" >> $GITHUB_ENV
+          echo "AZURE_TENANT_ID=ci_dummy_tenant"     >> $GITHUB_ENV
+          echo "USE_LLM=true"                        >> $GITHUB_ENV
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          pytest
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
