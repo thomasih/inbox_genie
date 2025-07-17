@@ -1,6 +1,6 @@
 # InboxGenie
 
-[![Build Status](https://img.shields.io/badge/build-pending-yellow.svg)]()
+[![CI](https://github.com/thomasih/inbox_genie/actions/workflows/ci.yml/badge.svg)](https://github.com/thomasih/inbox_genie/actions/workflows/ci.yml)
 
 **InboxGenie** is a Dockerized FastAPI + React application that leverages Microsoft Graph and OpenAI to automatically classify and sort your emails into folders you define.
 
